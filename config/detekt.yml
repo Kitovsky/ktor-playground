@@ -1,0 +1,84 @@
+# default rules: https://github.com/detekt/detekt/blob/main/detekt-core/src/main/resources/default-detekt-config.yml
+# rules description https://detekt.dev/comments.html
+
+build:
+  maxIssues: 0
+
+complexity:
+  MethodOverloading:
+    active: true
+    threshold: 3
+  NamedArguments:
+    active: true
+    threshold: 3
+  StringLiteralDuplication:
+    active: true
+    excludes: [ '**/test/**', '**/commonTest/**', '**/jvmTest/**']
+    threshold: 3
+    ignoreAnnotation: true
+    excludeStringsWithLessThan5Characters: true
+    ignoreStringsRegex: '$^'
+
+coroutines:
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+  SuspendFunWithCoroutineScopeReceiver:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+
+exceptions:
+  ObjectExtendsThrowable:
+    active: true
+  TooGenericExceptionCaught:
+    active: false
+
+naming:
+  NoNameShadowing:
+    active: true
+
+potential-bugs:
+  UnconditionalJumpStatementInLoop:
+    active: true
+  UnreachableCatchBlock:
+    active: true
+  UnusedUnaryOperator:
+    active: true
+  UselessPostfixExpression:
+    active: true
+
+style:
+  ClassOrdering:
+    active: true
+  DestructuringDeclarationWithTooManyEntries:
+    active: true
+    maxDestructuringEntries: 2
+  EqualsOnSignatureLine:
+    active: true
+  ForbiddenComment:
+    active: false
+  MaxLineLength:
+    maxLineLength: 150
+  RedundantHigherOrderMapUsage:
+    active: true
+  ReturnCount:
+    active: true
+    max: 2
+    excludedFunctions: 'equals'
+    excludeLabeled: false
+    excludeReturnFromLambda: true
+    excludeGuardClauses: true
+  UnnecessaryFilter:
+    active: true
+  UnnecessaryLet:
+    active: true
+  UnusedImports:
+    active: true
+  UseIfEmptyOrIfBlank:
+    active: true
+  UseIsNullOrEmpty:
+    active: true
+  WildcardImport:
+    active: false
