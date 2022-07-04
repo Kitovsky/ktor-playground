@@ -1,8 +1,9 @@
 package com.lonerx
 
 import com.lonerx.ktor.events.PersonEvent
-import io.ktor.server.application.*
-import com.lonerx.ktor.routing.*
+import com.lonerx.ktor.routing.configureRouting
+import io.ktor.server.application.Application
+import io.ktor.server.application.log
 
 fun main(args: Array<String>): Unit =
     io.ktor.server.netty.EngineMain.main(args)

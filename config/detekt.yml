@@ -81,4 +81,4 @@ style:
   UseIsNullOrEmpty:
     active: true
   WildcardImport:
-    active: false
+    active: true
