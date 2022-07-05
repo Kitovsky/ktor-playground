@@ -8,6 +8,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.NewTopic
@@ -67,6 +69,8 @@ class FortunesKafkaPublisher(
         }
 
         topic = NewTopic(TOPIC, PARTITIONS, REPLICAS)
+
+        startSendingLoop()
     }
 
     private fun startSendingLoop() {
@@ -77,7 +81,7 @@ class FortunesKafkaPublisher(
                 delay(delay.seconds)
                 val fortune = provider.nextFortune()
                 logger.debug { "sending fortune #${fortune.id}" }
-                kafkaProducer.send(ProducerRecord("FORTUNE", fortune.fortune))
+                kafkaProducer.send(ProducerRecord(TOPIC, "FORTUNE", Json.encodeToString(fortune)))
             }
         }
     }
@@ -86,12 +90,12 @@ class FortunesKafkaPublisher(
         const val TOPIC = "lonerx.dev.fortunes"
         const val PARTITIONS = 3
         const val REPLICAS: Short = 1
-        const val RECORD_RETENTION_TIME_MS = 3 * 1000
+        const val RECORD_RETENTION_TIME_MS = 5 * 1000
 
         const val INTERVAL_MIN_SEC = 5
         const val INTERVAL_MAX_SEC = 15
 
-        const val KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+        const val KAFKA_BOOTSTRAP_SERVERS = "kafka.local:9092"
         const val KAFKA_KEY_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer"
         const val KAFKA_VALUE_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer"
     }
