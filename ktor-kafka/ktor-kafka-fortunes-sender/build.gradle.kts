@@ -33,11 +33,14 @@ repositories {
 
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
 
+    implementation("io.insert-koin:koin-ktor:$koinVersion")
+    implementation("io.insert-koin:koin-logger-slf4j:$koinVersion")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+
+    implementation("org.apache.kafka:kafka-clients:$kafkaVersion")
 
     implementation("io.github.microutils:kotlin-logging:$muVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
