@@ -75,7 +75,9 @@ class FortunesKafkaPublisher(
             while (isActive) {
                 val delay = Random.nextInt(INTERVAL_MIN_SEC, INTERVAL_MAX_SEC)
                 delay(delay.seconds)
-                kafkaProducer.send(ProducerRecord("FORTUNE", provider.nextFortune().fortune))
+                val fortune = provider.nextFortune()
+                logger.debug { "sending fortune #${fortune.id}" }
+                kafkaProducer.send(ProducerRecord("FORTUNE", fortune.fortune))
             }
         }
     }

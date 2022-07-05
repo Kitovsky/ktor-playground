@@ -1,5 +1,6 @@
 package com.lonerx
 
+import com.lonerx.ktor.configureWebSockets
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.response.respondText
@@ -11,6 +12,7 @@ fun main(args: Array<String>): Unit =
 
 @Suppress("unused")
 fun Application.module() {
+    configureWebSockets()
     routing {
         get("/") {
             call.respondText("fortune receiver is up and running\n")

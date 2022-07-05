@@ -9,6 +9,7 @@ val muVersion = "2.1.23"
 plugins {
     application
     kotlin("jvm")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("io.gitlab.arturbosch.detekt") version "1.20.0"
 }
@@ -33,6 +34,9 @@ repositories {
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-websockets-jvm:$ktorVersion")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
     implementation("org.apache.kafka:kafka-clients:$kafkaVersion")
 
