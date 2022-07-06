@@ -14,18 +14,22 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
 import io.ktor.websocket.send
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import java.time.Duration
 import java.util.Properties
 import java.util.UUID
-import kotlin.random.Random
-import kotlin.time.Duration.Companion.seconds
 
+@Suppress("LongMethod")
 fun Application.configureWebSockets() {
     install(WebSockets) {
         pingPeriod = Duration.ofSeconds(15)
@@ -35,41 +39,61 @@ fun Application.configureWebSockets() {
     }
 
     routing {
-        webSocket("/ws/test") {
-            application.log.info("starting ws session")
-            try {
-                while (true) {
-                    val delay = Random.nextInt(5, 15)
-                    delay(delay.seconds)
-                    outgoing.send(Frame.Text("delay was ${delay.seconds} seconds"))
-                }
-            } finally {
-                application.log.info("closing ws session")
-            }
-        }
         webSocket("/ws/fortunes") {
-            send("Welcome to Fortune Teller world!")
-            application.log.info("starting ws session")
-            val consumer = createFortunesKafkaReceiver()
-            consumer.subscribe(listOf(TOPIC))
+            application.log.info("ws session started")
+            send("Welcome to fortunes world!")
+            send("Any text you enter will be echoed, enter 'bye' to quit")
+
+            val fortuneReaderLoop = launch {
+                application.log.debug("starting kafka reader loop")
+                val consumer = createFortunesKafkaReceiver()
+                consumer.subscribe(listOf(TOPIC))
+                try {
+                    while (isActive) {
+                        consumer.poll(Duration.ofMillis(POLL_DURATION_MILLIS)).forEach {
+                            val fortune = Json.decodeFromString<Fortune>(it.value())
+                            application.log.debug("received fortune #${fortune.id}")
+                            send(fortune.fortune)
+                        }
+                    }
+                } finally {
+                    application.log.debug("kafka reader loop done, cleaning resources")
+                    consumer.apply {
+                        unsubscribe()
+                        close()
+                    }
+                }
+            }
+
             try {
-                application.log.debug("listening to kafka!!!")
-                var num = 0
-                while (num < 200) {
-                    num++
-                    application.log.debug("polling $num")
-                    consumer.poll(Duration.ofMillis(POLL_DURATION_MILLIS)).forEach {
-                        val fortune = Json.decodeFromString<Fortune>(it.value())
-                        application.log.debug("received fortune #${fortune.id}")
-                        send(fortune.fortune)
+                for (frame in incoming) {
+                    when (frame) {
+                        is Frame.Text -> {
+                            val text = frame.readText()
+                            application.log.debug("Text frame received: $text")
+                            send("echo: $text")
+                            if (text.equals("bye", ignoreCase = true)) {
+                                close(CloseReason(CloseReason.Codes.NORMAL, "Good bye!"))
+                            }
+                        }
+                        is Frame.Binary -> {
+                            application.log.debug("Binary frame received")
+                        }
+                        is Frame.Close -> {
+                            application.log.debug("Close frame received")
+                        }
+                        is Frame.Ping -> {
+                            application.log.debug("Ping frame received")
+                        }
+                        is Frame.Pong -> {
+                            application.log.debug("Pong frame received")
+                        }
                     }
                 }
             } finally {
-                application.log.info("closing ws session")
-                consumer.apply {
-                    unsubscribe()
-                    close()
-                }
+                application.log.debug("finally block: shutting down reader loop")
+                fortuneReaderLoop.cancelAndJoin()
+                application.log.debug("finally block: reader loop coroutine joined")
             }
         }
     }
@@ -86,7 +110,7 @@ fun createFortunesKafkaReceiver() = KafkaConsumer<String, String>(
 
 object KafkaConfig {
     const val TOPIC = "lonerx.dev.fortunes"
-    const val POLL_DURATION_MILLIS = 500L
+    const val POLL_DURATION_MILLIS = 200L
 
     const val KAFKA_BOOTSTRAP_SERVERS = "kafka.local:9092"
     const val KAFKA_KEY_DESERIALIZER = "org.apache.kafka.common.serialization.StringDeserializer"

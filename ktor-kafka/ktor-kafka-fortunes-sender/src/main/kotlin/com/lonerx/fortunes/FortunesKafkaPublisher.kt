@@ -33,7 +33,6 @@ class FortunesKafkaPublisher(
     }
 
     private val kafkaProducer: KafkaProducer<String, String>
-    private val topic: NewTopic
 
     init {
         val producerConfig = Properties().apply {
@@ -67,8 +66,6 @@ class FortunesKafkaPublisher(
         } finally {
             kafkaAdmin.close()
         }
-
-        topic = NewTopic(TOPIC, PARTITIONS, REPLICAS)
 
         startSendingLoop()
     }
