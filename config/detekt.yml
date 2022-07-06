@@ -18,6 +18,9 @@ complexity:
     ignoreAnnotation: true
     excludeStringsWithLessThan5Characters: true
     ignoreStringsRegex: '$^'
+  NestedBlockDepth:
+    active: true
+    threshold: 5
 
 coroutines:
   RedundantSuspendModifier:
