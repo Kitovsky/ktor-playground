@@ -55,7 +55,7 @@ class FortuneSessionHandler(
                 consumer.poll(Duration.ofMillis(POLL_DURATION_MILLIS)).forEach { record ->
                     val fortune = Json.decodeFromString<Fortune>(record.value())
                     logger.debug { "kafkaLoop: received fortune #${fortune.id}" }
-                    outgoing.send(Frame.Text("FORTUNE #${fortune.id}:\n${fortune.fortune}\n"))
+                    outgoing.send(Frame.Text("FORTUNE #${fortune.id}:\n${fortune.text}\n"))
                 }
             }
         } finally {
