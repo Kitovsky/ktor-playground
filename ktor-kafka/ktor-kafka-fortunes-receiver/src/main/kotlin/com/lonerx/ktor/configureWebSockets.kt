@@ -34,7 +34,7 @@ fun Application.configureWebSockets() {
 //            application.log.debug("session handler finished")
 
             application.log.debug("starting session handler")
-            FortuneSessionHandler(this).startBlocking()
+            FortuneSessionHandler(application.environment.config, this).startBlocking()
             application.log.debug("session handler finished")
         }
     }

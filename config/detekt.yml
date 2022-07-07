@@ -14,7 +14,7 @@ complexity:
   StringLiteralDuplication:
     active: true
     excludes: [ '**/test/**', '**/commonTest/**', '**/jvmTest/**']
-    threshold: 3
+    threshold: 4
     ignoreAnnotation: true
     excludeStringsWithLessThan5Characters: true
     ignoreStringsRegex: '$^'

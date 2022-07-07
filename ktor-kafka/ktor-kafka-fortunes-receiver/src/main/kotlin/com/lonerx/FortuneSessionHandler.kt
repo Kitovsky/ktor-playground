@@ -1,6 +1,7 @@
 package com.lonerx
 
 import com.lonerx.model.Fortune
+import io.ktor.server.config.ApplicationConfig
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
@@ -22,6 +23,7 @@ import java.util.Properties
 import java.util.UUID
 
 class FortuneSessionHandler(
+    config: ApplicationConfig,
     private val session: WebSocketSession
 ) : CoroutineScope, KLogging() {
 
@@ -30,6 +32,9 @@ class FortuneSessionHandler(
         logger.error(t) { "An error occurred during coroutine execution, stopping everything" }
         supervisor.cancel()
     }
+
+    private val bootstrapServers = config.property("kafka.bootstrap.servers").getList()
+    private val topicName = config.property("kafka.topic.name").getString()
 
     private val incoming = session.incoming
     private val outgoing = session.outgoing
@@ -49,7 +54,7 @@ class FortuneSessionHandler(
 
     private suspend fun kafkaLoop() {
         val consumer = createKafkaConsumer()
-        consumer.subscribe(listOf(TOPIC))
+        consumer.subscribe(listOf(topicName))
         try {
             while (isActive) {
                 consumer.poll(Duration.ofMillis(POLL_DURATION_MILLIS)).forEach { record ->
@@ -109,17 +114,14 @@ class FortuneSessionHandler(
     private fun createKafkaConsumer() = KafkaConsumer<String, String>(
         Properties().apply {
             put("group.id", UUID.randomUUID().toString())
-            put("bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
+            put("bootstrap.servers", bootstrapServers)
             put("key.deserializer", KAFKA_KEY_DESERIALIZER)
             put("value.deserializer", KAFKA_VALUE_DESERIALIZER)
         }
     )
 
     companion object {
-        const val TOPIC = "lonerx.dev.fortunes"
         const val POLL_DURATION_MILLIS = 200L
-
-        const val KAFKA_BOOTSTRAP_SERVERS = "kafka.local:9092"
         const val KAFKA_KEY_DESERIALIZER = "org.apache.kafka.common.serialization.StringDeserializer"
         const val KAFKA_VALUE_DESERIALIZER = "org.apache.kafka.common.serialization.StringDeserializer"
     }

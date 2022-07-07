@@ -1,5 +1,6 @@
 package com.lonerx.fortunes
 
+import io.ktor.server.config.ApplicationConfig
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,13 +16,12 @@ import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.config.TopicConfig
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException
 import java.util.Properties
-import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 class FortunesKafkaPublisher(
+    config: ApplicationConfig,
     private val provider: FortunesProvider
 ) : CoroutineScope, KLogging() {
 
@@ -32,66 +32,65 @@ class FortunesKafkaPublisher(
     }
 
     private val kafkaProducer: KafkaProducer<String, String>
+    private val topicName: String
 
     init {
-        val producerConfig = Properties().apply {
-            put("bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
+        topicName = config.property("kafka.topic.name").getString()
+        val topicPartitions = config.property("kafka.topic.partitions").getString().toInt()
+        val topicReplicas = config.property("kafka.topic.replicas").getString().toShort()
+
+        val bootstrapServers = config.property("kafka.bootstrap.servers").getList()
+
+        val producerProperties = Properties().apply {
+            put("bootstrap.servers", bootstrapServers)
             put("key.serializer", KAFKA_KEY_SERIALIZER)
             put("value.serializer", KAFKA_VALUE_SERIALIZER)
         }
-        kafkaProducer = KafkaProducer(producerConfig)
+        kafkaProducer = KafkaProducer(producerProperties)
 
-        val adminConfig = Properties().apply {
-            put("bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
+        val adminProperties = Properties().apply {
+            put("bootstrap.servers", bootstrapServers)
         }
-        val kafkaAdmin = AdminClient.create(adminConfig)
-        try {
-            val res = kafkaAdmin.describeTopics(listOf(TOPIC))
-            val descr = res.topicNameValues()[TOPIC]?.get()
-            logger.debug { "topic $TOPIC already exists: $descr" }
-        } catch (e: ExecutionException) {
-            if (e.cause !is UnknownTopicOrPartitionException) {
-                logger.error(e) { "exception" }
-                throw e
-            }
 
-            logger.debug { "topic $TOPIC does not exist, creating it now" }
-            val newTopicConfig = mapOf(
-                TopicConfig.RETENTION_MS_CONFIG to RECORD_RETENTION_TIME_MS.toString()
-            )
-            val newTopic = NewTopic(TOPIC, PARTITIONS, REPLICAS).configs(newTopicConfig)
-            kafkaAdmin.createTopics(listOf(newTopic)).values()[TOPIC]?.get()
-            logger.debug { "topic $TOPIC has been created" }
-        } finally {
-            kafkaAdmin.close()
+        AdminClient.create(adminProperties).use { admin ->
+            if (admin.listTopics().names().get().contains(topicName)) {
+                logger.debug { "topic $topicName already exists" }
+            } else {
+                logger.debug { "topic $topicName does not exist, creating it now" }
+                // createTopics() is async, hence we wait for completion with .get()
+                admin.createTopics(
+                    listOf(
+                        NewTopic(topicName, topicPartitions, topicReplicas).configs(
+                            mapOf(TopicConfig.RETENTION_MS_CONFIG to RECORD_RETENTION_TIME_MS.toString())
+                        )
+                    )
+                ).values()[topicName]?.get()
+                logger.debug { "topic $topicName has been created" }
+            }
         }
 
         startSendingLoop()
     }
 
     private fun startSendingLoop() {
-        logger.debug { "starting fortune teller sending loop" }
+        logger.debug { "starting fortune sending loop" }
         launch {
             while (isActive) {
                 val delay = Random.nextInt(INTERVAL_MIN_SEC, INTERVAL_MAX_SEC)
                 delay(delay.seconds)
                 val fortune = provider.nextFortune()
                 logger.debug { "sending fortune #${fortune.id}" }
-                kafkaProducer.send(ProducerRecord(TOPIC, "FORTUNE", Json.encodeToString(fortune)))
+                kafkaProducer.send(ProducerRecord(topicName, "FORTUNE", Json.encodeToString(fortune)))
             }
         }
     }
 
     companion object {
-        const val TOPIC = "lonerx.dev.fortunes"
-        const val PARTITIONS = 3
-        const val REPLICAS: Short = 1
         const val RECORD_RETENTION_TIME_MS = 5 * 1000
 
         const val INTERVAL_MIN_SEC = 5
         const val INTERVAL_MAX_SEC = 15
 
-        const val KAFKA_BOOTSTRAP_SERVERS = "kafka.local:9092"
         const val KAFKA_KEY_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer"
         const val KAFKA_VALUE_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer"
     }
