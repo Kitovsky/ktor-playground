@@ -1,6 +1,5 @@
 package com.lonerx.fortunes
 
-import com.lonerx.fortunesProvider
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

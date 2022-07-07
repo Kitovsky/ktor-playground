@@ -14,7 +14,7 @@ fun main(args: Array<String>): Unit =
 fun Application.module() {
     koin {
         modules(
-            fortunesProvider
+            fortunesModule
         )
     }
 

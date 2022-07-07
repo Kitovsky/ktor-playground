@@ -5,7 +5,7 @@ import com.lonerx.fortunes.FortunesKafkaPublisher
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
-val fortunesProvider = module(createdAtStart = true) {
+val fortunesModule = module(createdAtStart = true) {
     singleOf(::FortunesProvider)
     singleOf(::FortunesKafkaPublisher)
 }
