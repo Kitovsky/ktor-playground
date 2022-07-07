@@ -29,6 +29,7 @@ fun Application.configureWebSockets() {
 
 //            val sessionJob = FortuneSessionHandler(this).start()
 //            application.log.debug("session handler started")
+//            // do some useful stuff here
 //            sessionJob.join()
 //            application.log.debug("session handler finished")
 
